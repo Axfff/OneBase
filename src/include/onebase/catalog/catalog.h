@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -10,6 +11,9 @@
 #include "onebase/storage/table/table_heap.h"
 
 namespace onebase {
+
+template <typename KeyType, typename ValueType, typename KeyComparator>
+class BPlusTree;
 
 struct TableInfo {
   Schema schema_;
@@ -29,36 +33,18 @@ struct IndexInfo {
   std::vector<uint32_t> key_attrs_;
   bool supports_point_lookup_{false};
   std::unordered_map<int32_t, std::vector<RID>> int_rid_map_;
+  std::unique_ptr<BPlusTree<int, RID, std::less<int>>> int_index_;
 
   IndexInfo(Schema key_schema, std::string name, std::string table_name,
-            index_oid_t oid, std::vector<uint32_t> key_attrs)
-      : key_schema_(std::move(key_schema)), name_(std::move(name)),
-        table_name_(std::move(table_name)), oid_(oid), key_attrs_(std::move(key_attrs)) {}
+            index_oid_t oid, std::vector<uint32_t> key_attrs);
+  ~IndexInfo();
 
   auto SupportsPointLookup() const -> bool { return supports_point_lookup_; }
   auto GetLookupAttr() const -> uint32_t { return key_attrs_.front(); }
 
-  auto LookupInteger(int32_t key) const -> const std::vector<RID> * {
-    auto it = int_rid_map_.find(key);
-    if (it == int_rid_map_.end()) {
-      return nullptr;
-    }
-    return &it->second;
-  }
-
-  auto InsertEntry(int32_t key, const RID &rid) -> void { int_rid_map_[key].push_back(rid); }
-
-  auto RemoveEntry(int32_t key, const RID &rid) -> void {
-    auto it = int_rid_map_.find(key);
-    if (it == int_rid_map_.end()) {
-      return;
-    }
-    auto &rids = it->second;
-    rids.erase(std::remove(rids.begin(), rids.end(), rid), rids.end());
-    if (rids.empty()) {
-      int_rid_map_.erase(it);
-    }
-  }
+  auto LookupInteger(int32_t key) const -> const std::vector<RID> *;
+  void InsertEntry(int32_t key, const RID &rid);
+  void RemoveEntry(int32_t key, const RID &rid);
 };
 
 class Catalog {

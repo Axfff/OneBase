@@ -93,10 +93,21 @@ void TablePage::DeleteTuple(uint16_t slot_num) {
 
 auto TablePage::UpdateTuple(uint16_t slot_num, const char *new_data, uint32_t new_size) -> bool {
   auto old_size = GetTupleLengthAtSlot(slot_num);
-  if (new_size > old_size && (new_size - old_size) > GetFreeSpaceRemaining()) {
+  auto old_offset = GetTupleOffsetAtSlot(slot_num);
+  if (old_size == 0) {
     return false;
   }
-  DeleteTuple(slot_num);
+
+  if (new_size <= old_size) {
+    std::memcpy(data_ + old_offset, new_data, new_size);
+    SetTupleLengthAtSlot(slot_num, static_cast<uint16_t>(new_size));
+    return true;
+  }
+
+  if (new_size > GetFreeSpaceRemaining()) {
+    return false;
+  }
+
   auto fsp = GetFreeSpacePointer();
   auto new_fsp = fsp - new_size;
   SetFreeSpacePointer(new_fsp);

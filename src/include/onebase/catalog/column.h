@@ -37,7 +37,7 @@ class Column {
     switch (type) {
       case TypeId::BOOLEAN: return 1;
       case TypeId::INTEGER: return 4;
-      case TypeId::FLOAT: return 8;
+      case TypeId::FLOAT: return 4;
       default: return 0;
     }
   }

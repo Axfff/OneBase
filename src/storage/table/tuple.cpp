@@ -26,9 +26,16 @@ auto Tuple::GetValue(const Schema *schema, uint32_t column_idx) const -> Value {
   if (!values_.empty() && column_idx < values_.size()) {
     return values_[column_idx];
   }
-  // Otherwise, deserialize from raw data using schema
-  const auto &column = schema->GetColumn(column_idx);
-  return Value::DeserializeFrom(data_.data() + column.GetOffset(), column.GetType());
+  uint32_t offset = 0;
+  for (uint32_t i = 0; i <= column_idx; ++i) {
+    const auto &column = schema->GetColumn(i);
+    Value value = Value::DeserializeFrom(data_.data() + offset, column.GetType());
+    if (i == column_idx) {
+      return value;
+    }
+    offset += value.GetSerializedSize();
+  }
+  return Value();
 }
 
 auto Tuple::ToString() const -> std::string {
